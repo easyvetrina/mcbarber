@@ -100,8 +100,7 @@
       serviziEls.forEach(row => {
         const nome = row.querySelector('.sv-nome').value.trim();
         const prezzo = row.querySelector('.sv-prezzo').value.trim();
-        const icona = row.querySelector('.sv-icona').value.trim();
-        if (nome) servizi.push({ nome, prezzo, icona: icona||'✂️' });
+        if (nome) servizi.push({ nome, prezzo });
       });
 
       // Operatori da lista
