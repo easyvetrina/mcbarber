@@ -1,6 +1,12 @@
 # 💈 BarberClub — Carta Fedeltà Digitale
 
-Sito vetrina + carta fedeltà digitale per barbieri. Stack: HTML + CSS + JS + Firebase Firestore. Deploy su Netlify. **Costo: 0€**
+Sito vetrina + carta fedeltà digitale per barbieri. Stack: HTML + CSS + JS + Firebase Firestore. Deploy su GitHub Pages. **Costo: 0€**
+
+## 🔗 Link di accesso
+
+- **Sito vetrina + carta fedeltà:** https://easyvetrina.github.io/mcbarber/
+- **Pannello admin:** https://easyvetrina.github.io/mcbarber/admin.html
+- **Password admin:** `mcbarber2026`
 
 ---
 
