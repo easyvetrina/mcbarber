@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin — BarberClub</title>
+  <title>Admin — MC BARBER</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -44,7 +44,7 @@
     // =============================================
     async function loadSettings() {
       const snap = await getDoc(doc(db,'settings','config'));
-      settings = snap.exists() ? snap.data() : { maxTimbri:10, sconto:'Taglio gratis', nomeSalone:'BarberClub', indirizzo:'', telefono:'', email:'', orari:{}, servizi:[], operatori:[], mapLink:'' };
+      settings = snap.exists() ? snap.data() : { maxTimbri:10, sconto:'Taglio gratis', nomeSalone:'MC BARBER', indirizzo:'', telefono:'', email:'', orari:{}, servizi:[], operatori:[], mapLink:'' };
 
       document.getElementById('set-nome').value = settings.nomeSalone||'';
       document.getElementById('set-sconto').value = settings.sconto||'';
@@ -70,7 +70,7 @@
       // Operatori
       renderOperatoriAdmin(settings.operatori||[]);
 
-      document.querySelectorAll('.salone-nome-admin').forEach(el => el.textContent = settings.nomeSalone||'BarberClub');
+      document.querySelectorAll('.salone-nome-admin').forEach(el => el.textContent = settings.nomeSalone||'MC BARBER');
     }
 
     window.saveSettings = async function() {
@@ -493,7 +493,7 @@
   <!-- ADMIN PANEL -->
   <div id="admin-panel">
     <div class="admin-header">
-      <div class="admin-logo salone-nome-admin">BarberClub <span>Admin</span></div>
+      <div class="admin-logo salone-nome-admin">MC BARBER <span>Admin</span></div>
       <button class="logout-btn" onclick="adminLogout()">Esci</button>
     </div>
 
@@ -530,7 +530,7 @@
         <div class="setting-row">
           <div>
             <label class="setting-label">Nome del salone</label>
-            <input id="set-nome" class="setting-input" type="text" placeholder="BarberClub">
+            <input id="set-nome" class="setting-input" type="text" placeholder="MC BARBER">
           </div>
           <div>
             <label class="setting-label">Telefono salone</label>

@@ -1,4 +1,4 @@
-# 💈 BarberClub — Carta Fedeltà Digitale
+# 💈 MC BARBER — Carta Fedeltà Digitale
 
 Sito vetrina + carta fedeltà digitale per barbieri. Stack: HTML + CSS + JS + Firebase Firestore. Deploy su GitHub Pages. **Costo: 0€**
 
@@ -75,7 +75,7 @@ const ADMIN_PASSWORD = "barbiere2024";  // ← cambia questa!
 ```bash
 git init
 git add .
-git commit -m "Prima versione BarberClub"
+git commit -m "Prima versione MC BARBER"
 git remote add origin https://github.com/TUO_USERNAME/barberclub.git
 git push -u origin main
 ```

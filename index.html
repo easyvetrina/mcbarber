@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title id="page-title">BarberClub</title>
+  <title id="page-title">MC BARBER</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -28,12 +28,12 @@
     async function getSettings() {
       const snap = await getDoc(doc(db,'settings','config'));
       if (snap.exists()) return snap.data();
-      return { maxTimbri:10, sconto:'Taglio gratis', nomeSalone:'BarberClub', slogan:'', chiSiamo:'', indirizzo:'', telefono:'', email:'', orari:{}, servizi:[], operatori:[], mapLink:'' };
+      return { maxTimbri:10, sconto:'Taglio gratis', nomeSalone:'MC BARBER', slogan:'', chiSiamo:'', indirizzo:'', telefono:'', email:'', orari:{}, servizi:[], operatori:[], mapLink:'' };
     }
 
     async function populateVetrina() {
       const s = await getSettings();
-      const nome = s.nomeSalone || 'BarberClub';
+      const nome = s.nomeSalone || 'MC BARBER';
 
       document.querySelectorAll('.salone-nome').forEach(el => el.textContent = nome);
       document.getElementById('page-title').textContent = nome;
@@ -148,7 +148,7 @@
       document.getElementById('carta-nome-2').textContent = nome;
       document.getElementById('carta-telefono').textContent = '+39 ' + telefono;
       document.getElementById('carta-sconto-label').textContent = sconto;
-      document.querySelectorAll('.salone-nome').forEach(el => el.textContent = s.nomeSalone || 'BarberClub');
+      document.querySelectorAll('.salone-nome').forEach(el => el.textContent = s.nomeSalone || 'MC BARBER');
 
       const grid = document.getElementById('timbri-grid'); grid.innerHTML = '';
       for (let i = 0; i < max; i++) {
@@ -611,7 +611,7 @@
 <body>
 
   <nav>
-    <div class="nav-logo salone-nome">BarberClub</div>
+    <div class="nav-logo salone-nome">MC BARBER</div>
     <div class="nav-links" id="nav-links">
       <button class="nav-btn" onclick="showSection('registrazione')">Registrati</button>
       <button class="nav-btn gold" onclick="showSection('login')">La mia carta</button>
@@ -622,7 +622,7 @@
   <section id="hero" class="active">
     <div class="hero-body">
       <p class="hero-eyebrow">✦ Barbiere ✦</p>
-      <h1 class="hero-titolo salone-nome" id="hero-titolo">BarberClub</h1>
+      <h1 class="hero-titolo salone-nome" id="hero-titolo">MC BARBER</h1>
       <p class="hero-slogan" id="hero-slogan">Tradizione, stile e precisione — dal primo taglio all'ultimo dettaglio.</p>
     </div>
 
@@ -707,7 +707,7 @@
           </div>
           <div class="fedelta-card-preview">
             <div class="preview-card">
-              <div class="preview-salone salone-nome">BarberClub</div>
+              <div class="preview-salone salone-nome">MC BARBER</div>
               <div class="preview-timbri">
                 <span class="pt stamped">✂</span><span class="pt stamped">✂</span><span class="pt stamped">✂</span>
                 <span class="pt stamped">✂</span><span class="pt stamped">✂</span><span class="pt stamped">✂</span>
@@ -768,7 +768,7 @@
       </div>
       <div class="loyalty-card">
         <div class="card-top">
-          <div class="card-salone-nome salone-nome">BarberClub</div>
+          <div class="card-salone-nome salone-nome">MC BARBER</div>
           <div style="font-size:1.4rem;opacity:.4">✂</div>
         </div>
         <div class="card-owner">
