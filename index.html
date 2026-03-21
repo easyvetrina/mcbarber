@@ -568,7 +568,7 @@
 
     /* ── CARTA FEDELTÀ SECTION ── */
     .fedelta-section { background: linear-gradient(135deg, #0d0b07 0%, #0a0a0a 100%); overflow: hidden; }
-    .fedelta-layout { min-width: 0; }
+    .fedelta-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; min-width: 0; }
     .fedelta-desc { color: rgba(242,237,228,0.65); line-height: 1.7; font-size: 0.9rem; margin-bottom: 1.25rem; font-weight: 300; max-width: 380px; }
     .fedelta-steps { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.25rem; }
     .fedelta-step { display: flex; align-items: center; gap: 1.25rem; }
@@ -702,6 +702,18 @@
             <div class="fedelta-btns">
               <button class="btn-gold" onclick="showSection('registrazione')">Crea la tua carta</button>
               <button class="btn-outline" onclick="showSection('login')">Accedi</button>
+            </div>
+          </div>
+          <div class="fedelta-card-preview">
+            <div class="preview-card">
+              <div class="preview-salone salone-nome">MC BARBER</div>
+              <div class="preview-timbri">
+                <span class="pt stamped">✂</span><span class="pt stamped">✂</span><span class="pt stamped">✂</span>
+                <span class="pt stamped">✂</span><span class="pt stamped">✂</span><span class="pt stamped">✂</span>
+                <span class="pt stamped">✂</span><span class="pt empty"></span><span class="pt empty"></span>
+                <span class="pt empty"></span>
+              </div>
+              <div class="preview-info">7 / 10 timbri — <span style="color:var(--oro)">Taglio gratis</span></div>
             </div>
           </div>
         </div>
