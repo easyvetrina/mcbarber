@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — BarberClub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDN_jEAeMW7oK8q0P9CChAp1o0TLU492Xg",
+      authDomain: "sito-e-carta-fedelta.firebaseapp.com",
+      projectId: "sito-e-carta-fedelta",
+      storageBucket: "sito-e-carta-fedelta.firebasestorage.app",
+      messagingSenderId: "1042395503502",
+      appId: "1:1042395503502:web:5d7f62acd7f71dcbb6e2df"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const ADMIN_PASSWORD = "barbiere2024";
+    let allClienti = [];
+    let settings = {};
+
+    // =============================================
+    // LOGIN
+    // =============================================
+    window.adminLogin = function() {
+      if (document.getElementById('admin-pwd').value === ADMIN_PASSWORD) {
+        sessionStorage.setItem('admin_logged','1');
+        showPanel();
+      } else {
+        document.getElementById('login-error').textContent = 'Password errata.';
+      }
+    };
+    window.adminLogout = function() { sessionStorage.removeItem('admin_logged'); location.reload(); };
+
+    // =============================================
+    // SETTINGS
+    // =============================================
+    async function loadSettings() {
+      const snap = await getDoc(doc(db,'settings','config'));
+      settings = snap.exists() ? snap.data() : { maxTimbri:10, sconto:'Taglio gratis', nomeSalone:'BarberClub', indirizzo:'', telefono:'', email:'', orari:{}, servizi:[], operatori:[], mapLink:'' };
+
+      document.getElementById('set-nome').value = settings.nomeSalone||'';
+      document.getElementById('set-sconto').value = settings.sconto||'';
+      document.getElementById('set-max').value = settings.maxTimbri||10;
+      document.getElementById('set-slogan').value = settings.slogan||'';
+      document.getElementById('set-chi-siamo').value = settings.chiSiamo||'';
+      document.getElementById('set-indirizzo').value = settings.indirizzo||'';
+      document.getElementById('set-telefono').value = settings.telefono||'';
+      document.getElementById('set-email').value = settings.email||'';
+      document.getElementById('set-map').value = settings.mapLink||'';
+
+      // Orari
+      const giorni = ['lun','mar','mer','gio','ven','sab','dom'];
+      giorni.forEach(g => {
+        const val = settings.orari && settings.orari[g] ? settings.orari[g] : '';
+        const input = document.getElementById('orario-'+g);
+        if (input) input.value = val;
+      });
+
+      // Servizi
+      renderServiziAdmin(settings.servizi||[]);
+
+      // Operatori
+      renderOperatoriAdmin(settings.operatori||[]);
+
+      document.querySelectorAll('.salone-nome-admin').forEach(el => el.textContent = settings.nomeSalone||'BarberClub');
+    }
+
+    window.saveSettings = async function() {
+      const nomeSalone = document.getElementById('set-nome').value.trim();
+      const sconto = document.getElementById('set-sconto').value.trim();
+      const maxTimbri = parseInt(document.getElementById('set-max').value)||10;
+      const slogan = document.getElementById('set-slogan').value.trim();
+      const chiSiamo = document.getElementById('set-chi-siamo').value.trim();
+      const indirizzo = document.getElementById('set-indirizzo').value.trim();
+      const telefono = document.getElementById('set-telefono').value.trim();
+      const email = document.getElementById('set-email').value.trim();
+      const mapLink = document.getElementById('set-map').value.trim();
+
+      if (!nomeSalone||!sconto) { alert('Nome salone e premio sono obbligatori.'); return; }
+
+      // Orari
+      const giorni = ['lun','mar','mer','gio','ven','sab','dom'];
+      const orari = {};
+      giorni.forEach(g => {
+        const val = document.getElementById('orario-'+g).value.trim();
+        if (val) orari[g] = val;
+      });
+
+      // Servizi da lista
+      const serviziEls = document.querySelectorAll('.servizio-row');
+      const servizi = [];
+      serviziEls.forEach(row => {
+        const nome = row.querySelector('.sv-nome').value.trim();
+        const prezzo = row.querySelector('.sv-prezzo').value.trim();
+        const icona = row.querySelector('.sv-icona').value.trim();
+        if (nome) servizi.push({ nome, prezzo, icona: icona||'✂️' });
+      });
+
+      // Operatori da lista
+      const opEls = document.querySelectorAll('.operatore-row');
+      const operatori = [];
+      opEls.forEach(row => {
+        const nome = row.querySelector('.op-nome-input').value.trim();
+        const ruolo = row.querySelector('.op-ruolo-input').value.trim();
+        if (nome) operatori.push({ nome, ruolo });
+      });
+
+      const btn = document.getElementById('save-settings-btn');
+      btn.disabled = true; btn.textContent = 'Salvataggio...';
+
+      const newSettings = { nomeSalone, sconto, maxTimbri, slogan, chiSiamo, indirizzo, telefono, email, mapLink, orari, servizi, operatori };
+      await setDoc(doc(db,'settings','config'), newSettings);
+      settings = newSettings;
+
+      // Controlla clienti che ora superano il nuovo limite
+      let clientiAggiornati = 0;
+      allClienti.forEach(c => { if (c.timbri >= maxTimbri) clientiAggiornati++; });
+      if (clientiAggiornati > 0) {
+        showToast(`⚠️ ${clientiAggiornati} cliente/i ha già raggiunto il premio con il nuovo limite!`, 'gold');
+      }
+
+      btn.disabled = false; btn.textContent = '✓ Salvato!';
+      setTimeout(() => { btn.textContent = 'Salva impostazioni'; }, 2000);
+      document.querySelectorAll('.salone-nome-admin').forEach(el => el.textContent = nomeSalone);
+      await loadClienti(); filterClienti();
+    };
+
+    // =============================================
+    // SERVIZI ADMIN UI
+    // =============================================
+    function renderServiziAdmin(servizi) {
+      const container = document.getElementById('servizi-admin-list');
+      container.innerHTML = '';
+      const list = servizi.length > 0 ? servizi : [
+        {nome:'Taglio Uomo',prezzo:'da 15€',icona:'✂️'},
+        {nome:'Barba',prezzo:'da 10€',icona:'🪒'},
+        {nome:'Taglio + Barba',prezzo:'da 22€',icona:'💈'},
+        {nome:'Taglio Bambino',prezzo:'da 10€',icona:'👦'}
+      ];
+      list.forEach(sv => addServizioRow(sv));
+    }
+
+    function addServizioRow(sv = {}) {
+      const container = document.getElementById('servizi-admin-list');
+      const row = document.createElement('div');
+      row.className = 'servizio-row list-row';
+      row.innerHTML = `
+        <input class="setting-input sv-icona" type="text" placeholder="✂️" value="${sv.icona||''}" style="width:60px;text-align:center;">
+        <input class="setting-input sv-nome" type="text" placeholder="Nome servizio" value="${sv.nome||''}" style="flex:1;">
+        <input class="setting-input sv-prezzo" type="text" placeholder="Prezzo es. 15€" value="${sv.prezzo||''}" style="width:100px;">
+        <button class="remove-row-btn" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(row);
+    }
+    window.addServizio = () => addServizioRow();
+
+    // =============================================
+    // OPERATORI ADMIN UI
+    // =============================================
+    function renderOperatoriAdmin(operatori) {
+      const container = document.getElementById('operatori-admin-list');
+      container.innerHTML = '';
+      operatori.forEach(op => addOperatoreRow(op));
+    }
+
+    function addOperatoreRow(op = {}) {
+      const container = document.getElementById('operatori-admin-list');
+      const row = document.createElement('div');
+      row.className = 'operatore-row list-row';
+      row.innerHTML = `
+        <input class="setting-input op-nome-input" type="text" placeholder="Nome barbiere" value="${op.nome||''}" style="flex:1;">
+        <input class="setting-input op-ruolo-input" type="text" placeholder="Ruolo es. Senior Barber" value="${op.ruolo||''}" style="flex:1;">
+        <button class="remove-row-btn" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(row);
+    }
+    window.addOperatore = () => addOperatoreRow();
+
+    // =============================================
+    // CLIENTI
+    // =============================================
+    async function loadClienti() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('clienti-list').innerHTML = '';
+      const snap = await getDocs(collection(db,'clienti'));
+      allClienti = [];
+      snap.forEach(d => allClienti.push({id:d.id,...d.data()}));
+      allClienti.sort((a,b) => a.nome.localeCompare(b.nome));
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('total-clienti').textContent = allClienti.length;
+
+      // Conta premi da assegnare
+      const max = settings.maxTimbri||10;
+      const premi = allClienti.filter(c => c.timbri >= max).length;
+      document.getElementById('total-premi').textContent = premi;
+
+      renderClienti(allClienti);
+    }
+
+    function renderClienti(list) {
+      const container = document.getElementById('clienti-list');
+      container.innerHTML = '';
+      if (list.length === 0) { container.innerHTML = '<p class="empty-state">Nessun cliente trovato.</p>'; return; }
+      const max = settings.maxTimbri||10;
+
+      list.forEach(cliente => {
+        const isReady = cliente.timbri >= max;
+        const timbriMostrati = Math.min(cliente.timbri, max);
+        const card = document.createElement('div');
+        card.className = 'cliente-card' + (isReady ? ' ready' : '');
+        card.innerHTML = `
+          <div class="cliente-main">
+            <div class="cliente-avatar">${cliente.nome.charAt(0).toUpperCase()}</div>
+            <div class="cliente-info">
+              <div class="cliente-nome">${cliente.nome} ${isReady ? '<span class="badge-prize">🏆 Premio!</span>' : ''}</div>
+              <div class="cliente-tel">📱 ${cliente.telefono}</div>
+              <div class="timbri-mini">
+                ${Array.from({length:max},(_,i) => `<span class="mini-stamp ${i<timbriMostrati?'on':''}"></span>`).join('')}
+              </div>
+            </div>
+            <div class="cliente-count">
+              <span class="count-num">${timbriMostrati}</span>
+              <span class="count-label">/ ${max}</span>
+            </div>
+          </div>
+          <div class="cliente-actions">
+            <button class="action-btn timbra" onclick="timbra('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">✂ Timbra</button>
+            <button class="action-btn sconto ${!isReady?'':'active-sconto'}" onclick="applicaSconto('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">🎁 Applica sconto</button>
+            <button class="action-btn danger" onclick="deleteCliente('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">🗑</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // =============================================
+    // TIMBRA — con popup di conferma
+    // =============================================
+    window.timbra = function(telefono, nome) {
+      const max = settings.maxTimbri||10;
+      const cliente = allClienti.find(c => c.id === telefono);
+      if (!cliente) return;
+      if (cliente.timbri >= max) { showToast('⚠️ Applica prima lo sconto a questo cliente.', 'warn'); return; }
+
+      // Popup conferma
+      showConfirm(
+        `Timbrare la carta di <strong>${nome}</strong>?`,
+        `Timbri attuali: ${cliente.timbri} / ${max}`,
+        async () => {
+          const nuovi = cliente.timbri + 1;
+          await updateDoc(doc(db,'clienti',telefono), { timbri: nuovi, dataUltimoTimbro: new Date().toISOString() });
+          if (nuovi >= max) showToast(`🏆 ${nome} ha raggiunto il premio!`, 'gold');
+          else showToast(`✂ Timbrato! ${nome} → ${nuovi}/${max}`);
+          await loadClienti(); filterClienti();
+        }
+      );
+    };
+
+    // =============================================
+    // APPLICA SCONTO
+    // =============================================
+    window.applicaSconto = function(telefono, nome) {
+      const cliente = allClienti.find(c => c.id === telefono);
+      if (!cliente) return;
+      const max = settings.maxTimbri||10;
+      if (cliente.timbri < max) { showToast('Il cliente non ha ancora raggiunto il premio.', 'warn'); return; }
+
+      showConfirm(
+        `Applicare lo sconto a <strong>${nome}</strong>?`,
+        `I timbri verranno azzerati. Premio: ${settings.sconto||'Taglio gratis'}`,
+        async () => {
+          await updateDoc(doc(db,'clienti',telefono), { timbri: 0, dataUltimoSconto: new Date().toISOString() });
+          showToast(`🎁 Sconto applicato a ${nome}. Timbri azzerati!`, 'gold');
+          await loadClienti(); filterClienti();
+        }
+      );
+    };
+
+    // =============================================
+    // ELIMINA
+    // =============================================
+    window.deleteCliente = function(telefono, nome) {
+      showConfirm(
+        `Eliminare <strong>${nome}</strong>?`,
+        'Questa azione non può essere annullata.',
+        async () => {
+          await deleteDoc(doc(db,'clienti',telefono));
+          showToast(`🗑 ${nome} eliminato.`);
+          await loadClienti(); filterClienti();
+        }
+      );
+    };
+
+    // =============================================
+    // FILTRO
+    // =============================================
+    window.filterClienti = function() {
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const filtered = allClienti.filter(c => c.nome.toLowerCase().includes(q) || c.telefono.includes(q));
+      renderClienti(filtered);
+    };
+
+    // =============================================
+    // POPUP CONFERMA
+    // =============================================
+    function showConfirm(title, subtitle, onConfirm) {
+      document.getElementById('confirm-title').innerHTML = title;
+      document.getElementById('confirm-subtitle').textContent = subtitle;
+      document.getElementById('confirm-overlay').style.display = 'flex';
+      document.getElementById('confirm-ok').onclick = () => {
+        hideConfirm();
+        onConfirm();
+      };
+    }
+    function hideConfirm() { document.getElementById('confirm-overlay').style.display = 'none'; }
+    window.hideConfirm = hideConfirm;
+
+    // =============================================
+    // TOAST
+    // =============================================
+    function showToast(msg, type='default') {
+      const t = document.createElement('div');
+      t.className = 'toast ' + type;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    // =============================================
+    // PANEL & TABS
+    // =============================================
+    async function showPanel() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-panel').style.display = 'block';
+      await loadSettings();
+      await loadClienti();
+    }
+
+    window.showTab = function(tab) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-'+tab).classList.add('active');
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('admin_logged')) showPanel();
+      document.getElementById('admin-pwd').addEventListener('keydown', e => { if(e.key==='Enter') adminLogin(); });
+      document.getElementById('search-input').addEventListener('input', filterClienti);
+    });
+  </script>
+
+  <style>
+    :root { --nero:#0a0a0a; --oro:#c9a84c; --oro-chiaro:#e8c96e; --crema:#f5f0e8; --grigio:#888; --card-bg:#141414; --border:#2a2a2a; --danger:#e05555; --success:#4caf7d; --warn:#e09535; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--nero);color:var(--crema);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+    /* LOGIN */
+    #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}
+    .login-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:3rem;width:100%;max-width:400px;text-align:center;}
+    .login-icon{font-size:3rem;margin-bottom:1rem;}
+    .login-title{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--oro);margin-bottom:.5rem;}
+    .login-sub{color:var(--grigio);font-size:.85rem;margin-bottom:2rem;}
+    .login-input{width:100%;padding:.9rem 1rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;color:var(--crema);font-family:'DM Sans',sans-serif;font-size:1rem;text-align:center;letter-spacing:3px;margin-bottom:1rem;}
+    .login-input:focus{outline:none;border-color:var(--oro);}
+    .login-btn{width:100%;padding:1rem;background:var(--oro);color:var(--nero);border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:500;font-size:.9rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:background .2s;}
+    .login-btn:hover{background:var(--oro-chiaro);}
+    .login-error{color:var(--danger);font-size:.85rem;margin-top:.75rem;min-height:1.2em;}
+
+    /* PANEL */
+    #admin-panel{display:none;}
+    .admin-header{background:var(--card-bg);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .admin-logo{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--oro);}
+    .admin-logo span{color:var(--grigio);font-size:.75rem;font-family:'DM Sans',sans-serif;letter-spacing:2px;text-transform:uppercase;margin-left:.5rem;}
+    .logout-btn{padding:.5rem 1rem;background:transparent;border:1px solid var(--border);color:var(--grigio);font-family:'DM Sans',sans-serif;font-size:.75rem;letter-spacing:1px;cursor:pointer;border-radius:4px;transition:all .2s;}
+    .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+    .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card-bg);padding:0 2rem;}
+    .tab-btn{padding:1rem 1.5rem;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--grigio);font-family:'DM Sans',sans-serif;font-size:.85rem;letter-spacing:1px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+    .tab-btn:hover{color:var(--crema);}
+    .tab-btn.active{color:var(--oro);border-bottom-color:var(--oro);}
+    .tab-content{display:none;padding:2rem;max-width:1000px;margin:0 auto;}
+    .tab-content.active{display:block;}
+
+    /* STATS */
+    .stats-bar{display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;}
+    .stat-box{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:1.25rem 1.75rem;flex:1;min-width:140px;}
+    .stat-label{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--grigio);margin-bottom:.4rem;}
+    .stat-value{font-family:'Playfair Display',serif;font-size:2rem;color:var(--oro);}
+    .stat-box.prize .stat-value{color:var(--warn);}
+
+    /* SEARCH */
+    .search-bar{display:flex;gap:1rem;margin-bottom:1.5rem;}
+    .search-input{flex:1;padding:.75rem 1rem;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;color:var(--crema);font-family:'DM Sans',sans-serif;font-size:.95rem;}
+    .search-input:focus{outline:none;border-color:var(--oro);}
+    .search-input::placeholder{color:#444;}
+
+    /* CLIENTI */
+    #clienti-list{display:flex;flex-direction:column;gap:.75rem;}
+    .cliente-card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;transition:border-color .2s;}
+    .cliente-card:hover{border-color:#444;}
+    .cliente-card.ready{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.04);}
+    .cliente-main{display:flex;align-items:center;gap:1rem;margin-bottom:1rem;}
+    .cliente-avatar{width:44px;height:44px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--oro);flex-shrink:0;}
+    .cliente-info{flex:1;min-width:0;}
+    .cliente-nome{font-weight:500;font-size:1rem;margin-bottom:.2rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+    .badge-prize{font-size:.7rem;background:rgba(201,168,76,.15);color:var(--oro);padding:.2rem .5rem;border-radius:20px;border:1px solid rgba(201,168,76,.3);}
+    .cliente-tel{font-size:.8rem;color:var(--grigio);margin-bottom:.5rem;}
+    .timbri-mini{display:flex;gap:3px;flex-wrap:wrap;}
+    .mini-stamp{width:10px;height:10px;border-radius:50%;background:var(--border);}
+    .mini-stamp.on{background:var(--oro);}
+    .cliente-count{text-align:right;flex-shrink:0;}
+    .count-num{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--oro);line-height:1;}
+    .count-label{font-size:.75rem;color:var(--grigio);}
+    .cliente-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .action-btn{padding:.55rem 1.2rem;border:1px solid var(--border);background:transparent;color:var(--crema);font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer;border-radius:6px;transition:all .2s;}
+    .action-btn.timbra:hover{border-color:var(--oro);color:var(--oro);background:rgba(201,168,76,.08);}
+    .action-btn.sconto:hover,.action-btn.active-sconto{border-color:var(--success);color:var(--success);}
+    .action-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* SETTINGS */
+    .settings-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:1.5rem;}
+    .settings-title{font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:1.5rem;color:var(--oro);}
+    .setting-group{margin-bottom:1.25rem;}
+    .setting-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;}
+    .setting-label{display:block;font-size:.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--grigio);margin-bottom:.5rem;}
+    .setting-input{width:100%;padding:.85rem 1rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;color:var(--crema);font-family:'DM Sans',sans-serif;font-size:.95rem;}
+    .setting-input:focus{outline:none;border-color:var(--oro);}
+    .setting-hint{font-size:.75rem;color:var(--grigio);margin-top:.4rem;}
+    .save-btn{padding:.9rem 2rem;background:var(--oro);color:var(--nero);border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:500;font-size:.85rem;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;margin-top:.5rem;}
+    .save-btn:hover:not(:disabled){background:var(--oro-chiaro);}
+    .save-btn:disabled{opacity:.5;}
+    .add-btn{padding:.6rem 1.2rem;background:transparent;border:1px solid var(--oro);color:var(--oro);font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer;border-radius:6px;letter-spacing:1px;transition:all .2s;margin-top:.75rem;}
+    .add-btn:hover{background:rgba(201,168,76,.08);}
+
+    /* LIST ROWS */
+    .list-row{display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;}
+    .remove-row-btn{padding:.5rem .75rem;background:transparent;border:1px solid var(--border);color:var(--grigio);cursor:pointer;border-radius:4px;font-size:.8rem;flex-shrink:0;transition:all .2s;}
+    .remove-row-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* ORARI GRID */
+    .orari-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;}
+    .orario-input-row{display:flex;flex-direction:column;gap:.25rem;}
+    .orario-input-label{font-size:.7rem;color:var(--grigio);letter-spacing:1px;text-transform:uppercase;}
+
+    /* CONFIRM POPUP */
+    #confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;padding:1rem;}
+    .confirm-box{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:2rem;max-width:400px;width:100%;text-align:center;}
+    .confirm-icon{font-size:2.5rem;margin-bottom:1rem;}
+    .confirm-title{font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:.5rem;}
+    .confirm-subtitle{color:var(--grigio);font-size:.9rem;margin-bottom:1.75rem;line-height:1.5;}
+    .confirm-btns{display:flex;gap:.75rem;justify-content:center;}
+    .confirm-btn{padding:.75rem 1.75rem;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;transition:all .2s;border:none;}
+    .confirm-btn.ok{background:var(--oro);color:var(--nero);}
+    .confirm-btn.ok:hover{background:var(--oro-chiaro);}
+    .confirm-btn.cancel{background:transparent;border:1px solid var(--border);color:var(--grigio);}
+    .confirm-btn.cancel:hover{border-color:#555;color:var(--crema);}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:2rem;right:2rem;background:var(--card-bg);border:1px solid var(--border);color:var(--crema);padding:1rem 1.5rem;border-radius:8px;font-size:.9rem;opacity:0;transform:translateY(10px);transition:all .3s;z-index:9999;max-width:320px;box-shadow:0 8px 30px rgba(0,0,0,.4);}
+    .toast.show{opacity:1;transform:translateY(0);}
+    .toast.gold{border-color:var(--oro);color:var(--oro);}
+    .toast.warn{border-color:var(--warn);color:var(--warn);}
+
+    #loading{text-align:center;color:var(--grigio);padding:2rem;display:none;}
+    .empty-state{text-align:center;color:var(--grigio);padding:3rem;}
+
+    @media(max-width:600px){.tab-content{padding:1rem;}.admin-header{padding:1rem;}.tabs{padding:0 1rem;overflow-x:auto;}.stats-bar{flex-direction:column;}.setting-row{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-icon">🔐</div>
+      <h1 class="login-title">Pannello Admin</h1>
+      <p class="login-sub">Accesso riservato al barbiere</p>
+      <input id="admin-pwd" class="login-input" type="password" placeholder="••••••••">
+      <button class="login-btn" onclick="adminLogin()">Accedi</button>
+      <p class="login-error" id="login-error"></p>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <div id="admin-panel">
+    <div class="admin-header">
+      <div class="admin-logo salone-nome-admin">BarberClub <span>Admin</span></div>
+      <button class="logout-btn" onclick="adminLogout()">Esci</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="clienti" onclick="showTab('clienti')">Clienti</button>
+      <button class="tab-btn" data-tab="impostazioni" onclick="showTab('impostazioni')">Impostazioni</button>
+    </div>
+
+    <!-- TAB CLIENTI -->
+    <div id="tab-clienti" class="tab-content active">
+      <div class="stats-bar">
+        <div class="stat-box">
+          <div class="stat-label">Clienti totali</div>
+          <div class="stat-value" id="total-clienti">—</div>
+        </div>
+        <div class="stat-box prize">
+          <div class="stat-label">Premi da assegnare</div>
+          <div class="stat-value" id="total-premi">—</div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input id="search-input" class="search-input" type="text" placeholder="🔍 Cerca per nome o telefono...">
+      </div>
+      <div id="loading">Caricamento clienti...</div>
+      <div id="clienti-list"></div>
+    </div>
+
+    <!-- TAB IMPOSTAZIONI -->
+    <div id="tab-impostazioni" class="tab-content">
+
+      <!-- INFO SALONE -->
+      <div class="settings-card">
+        <h2 class="settings-title">🏪 Informazioni salone</h2>
+        <div class="setting-row">
+          <div>
+            <label class="setting-label">Nome del salone</label>
+            <input id="set-nome" class="setting-input" type="text" placeholder="BarberClub">
+          </div>
+          <div>
+            <label class="setting-label">Telefono salone</label>
+            <input id="set-telefono" class="setting-input" type="tel" placeholder="0922 123456">
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Slogan / sottotitolo hero</label>
+          <input id="set-slogan" class="setting-input" type="text" placeholder="Tradizione, stile e precisione — dal primo taglio all'ultimo dettaglio.">
+          <p class="setting-hint">Appare sotto il nome salone nella homepage</p>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Chi siamo (descrizione del negozio)</label>
+          <textarea id="set-chi-siamo" class="setting-input" rows="4" placeholder="Racconta la storia del tuo salone, i valori, l'esperienza..." style="resize:vertical"></textarea>
+          <p class="setting-hint">Appare nella sezione "La nostra storia" della homepage</p>
+        </div>
+        <div class="setting-row">
+          <div>
+            <label class="setting-label">Indirizzo</label>
+            <input id="set-indirizzo" class="setting-input" type="text" placeholder="Via Roma 1, Città">
+          </div>
+          <div>
+            <label class="setting-label">Email</label>
+            <input id="set-email" class="setting-input" type="email" placeholder="info@barbiere.it">
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Link Google Maps</label>
+          <input id="set-map" class="setting-input" type="url" placeholder="https://maps.google.com/...">
+          <p class="setting-hint">Incolla il link da Google Maps → Condividi → Copia link</p>
+        </div>
+      </div>
+
+      <!-- CARTA FEDELTÀ -->
+      <div class="settings-card">
+        <h2 class="settings-title">🎁 Carta fedeltà</h2>
+        <div class="setting-row">
+          <div>
+            <label class="setting-label">Premio al completamento</label>
+            <input id="set-sconto" class="setting-input" type="text" placeholder="es. Taglio gratis, 5€ di sconto...">
+            <p class="setting-hint">Questo testo appare sulla carta del cliente</p>
+          </div>
+          <div>
+            <label class="setting-label">Timbri necessari per il premio</label>
+            <input id="set-max" class="setting-input" type="number" min="1" max="50" value="10">
+            <p class="setting-hint">⚠️ Se abbassato, i clienti già oltre soglia riceveranno il premio</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVIZI -->
+      <div class="settings-card">
+        <h2 class="settings-title">✂️ Servizi e prezzi</h2>
+        <div id="servizi-admin-list"></div>
+        <button class="add-btn" onclick="addServizio()">+ Aggiungi servizio</button>
+      </div>
+
+      <!-- OPERATORI -->
+      <div class="settings-card">
+        <h2 class="settings-title">👤 Barbieri / Operatori</h2>
+        <div id="operatori-admin-list"></div>
+        <button class="add-btn" onclick="addOperatore()">+ Aggiungi barbiere</button>
+      </div>
+
+      <!-- ORARI -->
+      <div class="settings-card">
+        <h2 class="settings-title">🕐 Orari di apertura</h2>
+        <p class="setting-hint" style="margin-bottom:1rem">Scrivi gli orari es. "09:00 - 19:00" oppure "chiuso"</p>
+        <div class="orari-grid">
+          <div class="orario-input-row"><label class="orario-input-label">Lunedì</label><input id="orario-lun" class="setting-input" type="text" placeholder="09:00 - 19:00"></div>
+          <div class="orario-input-row"><label class="orario-input-label">Martedì</label><input id="orario-mar" class="setting-input" type="text" placeholder="09:00 - 19:00"></div>
+          <div class="orario-input-row"><label class="orario-input-label">Mercoledì</label><input id="orario-mer" class="setting-input" type="text" placeholder="09:00 - 19:00"></div>
+          <div class="orario-input-row"><label class="orario-input-label">Giovedì</label><input id="orario-gio" class="setting-input" type="text" placeholder="09:00 - 19:00"></div>
+          <div class="orario-input-row"><label class="orario-input-label">Venerdì</label><input id="orario-ven" class="setting-input" type="text" placeholder="09:00 - 19:00"></div>
+          <div class="orario-input-row"><label class="orario-input-label">Sabato</label><input id="orario-sab" class="setting-input" type="text" placeholder="09:00 - 13:00"></div>
+          <div class="orario-input-row"><label class="orario-input-label">Domenica</label><input id="orario-dom" class="setting-input" type="text" placeholder="chiuso"></div>
+        </div>
+      </div>
+
+      <button id="save-settings-btn" class="save-btn" onclick="saveSettings()">💾 Salva tutte le impostazioni</button>
+    </div>
+  </div>
+
+  <!-- CONFIRM POPUP -->
+  <div id="confirm-overlay">
+    <div class="confirm-box">
+      <div class="confirm-icon">✂️</div>
+      <h3 class="confirm-title" id="confirm-title"></h3>
+      <p class="confirm-subtitle" id="confirm-subtitle"></p>
+      <div class="confirm-btns">
+        <button class="confirm-btn cancel" onclick="hideConfirm()">Annulla</button>
+        <button class="confirm-btn ok" id="confirm-ok">Conferma</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

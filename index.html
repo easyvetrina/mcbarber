@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-title">BarberClub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDN_jEAeMW7oK8q0P9CChAp1o0TLU492Xg",
+      authDomain: "sito-e-carta-fedelta.firebaseapp.com",
+      projectId: "sito-e-carta-fedelta",
+      storageBucket: "sito-e-carta-fedelta.firebasestorage.app",
+      messagingSenderId: "1042395503502",
+      appId: "1:1042395503502:web:5d7f62acd7f71dcbb6e2df"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    function normalizePhone(p) { return p.replace(/\s+/g,'').replace(/^(\+39|0039)/,''); }
+
+    async function getSettings() {
+      const snap = await getDoc(doc(db,'settings','config'));
+      if (snap.exists()) return snap.data();
+      return { maxTimbri:10, sconto:'Taglio gratis', nomeSalone:'BarberClub', slogan:'', chiSiamo:'', indirizzo:'', telefono:'', email:'', orari:{}, servizi:[], operatori:[], mapLink:'' };
+    }
+
+    async function populateVetrina() {
+      const s = await getSettings();
+      const nome = s.nomeSalone || 'BarberClub';
+
+      document.querySelectorAll('.salone-nome').forEach(el => el.textContent = nome);
+      document.getElementById('page-title').textContent = nome;
+
+      // Hero
+      document.getElementById('hero-titolo').textContent = nome;
+      document.getElementById('hero-slogan').textContent = s.slogan || 'Tradizione, stile e precisione — dal primo taglio all\'ultimo dettaglio.';
+
+      // Chi siamo
+      if (s.chiSiamo) {
+        document.getElementById('chi-siamo-testo').textContent = s.chiSiamo;
+        document.getElementById('section-chi-siamo').style.display = 'block';
+      }
+
+      // Contatti
+      if (s.indirizzo) { document.getElementById('info-indirizzo').textContent = s.indirizzo; document.getElementById('row-indirizzo').style.display = 'flex'; }
+      if (s.telefono) { const el = document.getElementById('info-telefono'); el.textContent = s.telefono; el.href = 'tel:' + s.telefono; document.getElementById('row-telefono').style.display = 'flex'; }
+      if (s.email) { const el = document.getElementById('info-email'); el.textContent = s.email; el.href = 'mailto:' + s.email; document.getElementById('row-email').style.display = 'flex'; }
+      if (s.mapLink) { const b = document.getElementById('map-btn'); b.href = s.mapLink; b.style.display = 'inline-flex'; }
+
+      // Orari
+      const giorniNomi = {lun:'Lunedì',mar:'Martedì',mer:'Mercoledì',gio:'Giovedì',ven:'Venerdì',sab:'Sabato',dom:'Domenica'};
+      const orariContainer = document.getElementById('orari-list');
+      orariContainer.innerHTML = '';
+      if (s.orari && Object.keys(s.orari).length > 0) {
+        Object.entries(giorniNomi).forEach(([k, nome]) => {
+          const val = s.orari[k] || '';
+          const chiuso = val === 'chiuso' || val === '';
+          const row = document.createElement('div');
+          row.className = 'orario-row';
+          row.innerHTML = `<span class="orario-giorno">${nome}</span><span class="orario-ore${chiuso?' chiuso':''}">${chiuso ? 'Chiuso' : val}</span>`;
+          orariContainer.appendChild(row);
+        });
+      } else {
+        orariContainer.innerHTML = '<p style="color:var(--grigio);font-size:.9rem">Orari non ancora configurati.</p>';
+      }
+
+      // Servizi
+      const sg = document.getElementById('servizi-grid');
+      sg.innerHTML = '';
+      const servizi = (s.servizi && s.servizi.length > 0) ? s.servizi : [
+        {nome:'Taglio Uomo', prezzo:'da 15€', icona:'✂️'},
+        {nome:'Barba', prezzo:'da 10€', icona:'🪒'},
+        {nome:'Taglio + Barba', prezzo:'da 22€', icona:'💈'},
+        {nome:'Taglio Bambino', prezzo:'da 10€', icona:'👦'}
+      ];
+      servizi.forEach(sv => {
+        const el = document.createElement('div');
+        el.className = 'service-card';
+        el.innerHTML = `<div class="service-icon">${sv.icona||'✂️'}</div><div class="service-name">${sv.nome}</div><div class="service-price">${sv.prezzo}</div>`;
+        sg.appendChild(el);
+      });
+
+      // Operatori
+      const og = document.getElementById('operatori-grid');
+      og.innerHTML = '';
+      if (s.operatori && s.operatori.length > 0) {
+        s.operatori.forEach(op => {
+          const el = document.createElement('div');
+          el.className = 'operatore-card';
+          el.innerHTML = `<div class="op-avatar">${op.nome.charAt(0)}</div><div class="op-nome">${op.nome}</div>${op.ruolo ? `<div class="op-ruolo">${op.ruolo}</div>` : ''}`;
+          og.appendChild(el);
+        });
+        document.getElementById('section-operatori').style.display = 'block';
+      }
+
+      return s;
+    }
+
+    window.registerCliente = async function() {
+      const nome = document.getElementById('reg-nome').value.trim();
+      const telefono = normalizePhone(document.getElementById('reg-telefono').value.trim());
+      const errEl = document.getElementById('reg-error');
+      if (!nome || !telefono) { errEl.textContent = 'Inserisci nome e telefono.'; return; }
+      if (telefono.length < 9) { errEl.textContent = 'Numero non valido.'; return; }
+      errEl.textContent = '';
+      const btn = document.getElementById('reg-btn'); btn.disabled = true; btn.textContent = 'Attendere...';
+      try {
+        const snap = await getDoc(doc(db,'clienti',telefono));
+        if (snap.exists()) { errEl.textContent = 'Numero già registrato. Accedi invece.'; btn.disabled = false; btn.textContent = 'Registrati'; return; }
+        await setDoc(doc(db,'clienti',telefono), {nome, telefono, timbri:0, dataRegistrazione:new Date().toISOString()});
+        localStorage.setItem('cliente_telefono', telefono);
+        localStorage.setItem('cliente_nome', nome);
+        showCarta(telefono, nome, 0);
+      } catch(e) { errEl.textContent = 'Errore: '+e.message; btn.disabled = false; btn.textContent = 'Registrati'; }
+    };
+
+    window.loginCliente = async function() {
+      const telefono = normalizePhone(document.getElementById('login-telefono').value.trim());
+      const errEl = document.getElementById('login-error');
+      if (!telefono) { errEl.textContent = 'Inserisci il numero.'; return; }
+      errEl.textContent = '';
+      const btn = document.getElementById('login-btn'); btn.disabled = true; btn.textContent = 'Attendere...';
+      try {
+        const snap = await getDoc(doc(db,'clienti',telefono));
+        if (!snap.exists()) { errEl.textContent = 'Numero non trovato. Registrati prima.'; btn.disabled = false; btn.textContent = 'Accedi'; return; }
+        const data = snap.data();
+        localStorage.setItem('cliente_telefono', telefono);
+        localStorage.setItem('cliente_nome', data.nome);
+        showCarta(telefono, data.nome, data.timbri);
+      } catch(e) { errEl.textContent = 'Errore: '+e.message; btn.disabled = false; btn.textContent = 'Accedi'; }
+    };
+
+    async function showCarta(telefono, nome, timbri) {
+      const s = await getSettings();
+      const max = s.maxTimbri || 10;
+      const sconto = s.sconto || 'Taglio gratis';
+      const timbriMostrati = Math.min(timbri, max);
+      const isReady = timbri >= max;
+
+      document.getElementById('carta-nome').textContent = nome;
+      document.getElementById('carta-nome-2').textContent = nome;
+      document.getElementById('carta-telefono').textContent = '+39 ' + telefono;
+      document.getElementById('carta-sconto-label').textContent = sconto;
+      document.querySelectorAll('.salone-nome').forEach(el => el.textContent = s.nomeSalone || 'BarberClub');
+
+      const grid = document.getElementById('timbri-grid'); grid.innerHTML = '';
+      for (let i = 0; i < max; i++) {
+        const stamp = document.createElement('div');
+        stamp.className = 'stamp ' + (i < timbriMostrati ? 'stamped' : 'empty');
+        stamp.innerHTML = i < timbriMostrati ? '✂' : '';
+        stamp.style.animationDelay = (i * 0.05) + 's';
+        grid.appendChild(stamp);
+      }
+
+      document.getElementById('timbri-count').textContent = timbriMostrati;
+      document.getElementById('timbri-max').textContent = max;
+      document.getElementById('progress-bar').style.width = Math.round((timbriMostrati/max)*100) + '%';
+
+      if (isReady) {
+        document.getElementById('reward-banner').style.display = 'flex';
+        document.getElementById('reward-text').textContent = '🎉 Hai diritto a: ' + sconto + '!';
+        document.getElementById('mancano-text').textContent = '';
+      } else {
+        document.getElementById('reward-banner').style.display = 'none';
+        const mancano = max - timbriMostrati;
+        document.getElementById('mancano-text').textContent = mancano === 1 ? 'Ancora 1 visita al premio!' : `Ancora ${mancano} visite al premio!`;
+      }
+      showSection('carta');
+    }
+
+    window.logout = function() { localStorage.removeItem('cliente_telefono'); localStorage.removeItem('cliente_nome'); showSection('hero'); };
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await populateVetrina();
+      const tel = localStorage.getItem('cliente_telefono');
+      if (tel) {
+        try {
+          const snap = await getDoc(doc(db,'clienti',tel));
+          if (snap.exists()) { showCarta(tel, snap.data().nome, snap.data().timbri); return; }
+        } catch(e) {}
+      }
+    });
+  </script>
+
+  <style>
+    :root {
+      --nero: #080808;
+      --oro: #b8953f;
+      --oro-chiaro: #d4af6a;
+      --oro-pale: #f0e4c4;
+      --crema: #f2ede4;
+      --grigio: #777;
+      --card-bg: #111;
+      --border: #222;
+      --border-gold: rgba(184,149,63,0.25);
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--nero);
+      color: var(--crema);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top:0; left:0; right:0; z-index:100;
+      padding: 0.9rem 2.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(8,8,8,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--oro);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .nav-links { display: flex; gap: 0.75rem; align-items: center; }
+
+    .nav-btn {
+      padding: 0.5rem 1.4rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--crema);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 1px;
+      transition: all 0.25s;
+    }
+
+    .nav-btn:hover { border-color: var(--oro); color: var(--oro); }
+
+    .nav-btn.gold {
+      background: var(--oro);
+      border-color: var(--oro);
+      color: var(--nero);
+      font-weight: 500;
+    }
+
+    .nav-btn.gold:hover { background: var(--oro-chiaro); }
+
+    /* ── SECTIONS ── */
+    section { display: none; }
+    section.active { display: block; }
+    #hero.active { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+
+    /* ── HERO ── */
+    .hero-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 2.5rem;
+      position: relative;
+    }
+
+    /* decorative lines */
+    .hero-body::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(600px, 90vw);
+      height: min(600px, 90vw);
+      border-radius: 50%;
+      border: 1px solid var(--border-gold);
+      pointer-events: none;
+    }
+
+    .hero-body::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(480px, 72vw);
+      height: min(480px, 72vw);
+      border-radius: 50%;
+      border: 1px solid rgba(184,149,63,0.1);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.68rem;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--oro);
+      margin-bottom: 1.5rem;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .hero-eyebrow::before,
+    .hero-eyebrow::after {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 1px;
+      background: var(--oro);
+      opacity: 0.5;
+    }
+
+    .hero-titolo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3.5rem, 10vw, 8rem);
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -1px;
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+
+    .hero-slogan {
+      font-size: clamp(0.9rem, 2vw, 1.05rem);
+      color: var(--grigio);
+      max-width: 480px;
+      line-height: 1.8;
+      margin-bottom: 0;
+      font-weight: 300;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-gold {
+      padding: 0.9rem 2.5rem;
+      background: var(--oro);
+      color: var(--nero);
+      border: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s;
+      border-radius: 1px;
+    }
+
+    .btn-gold:hover { background: var(--oro-chiaro); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(184,149,63,0.2); }
+
+    .btn-outline {
+      padding: 0.9rem 2.5rem;
+      background: transparent;
+      color: var(--crema);
+      border: 1px solid var(--border);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s;
+      border-radius: 1px;
+    }
+
+    .btn-outline:hover { border-color: var(--oro); color: var(--oro); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0 3rem;
+      margin: 0;
+    }
+
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-icon { color: var(--oro); font-size: 1.2rem; opacity: 0.6; }
+
+    /* ── VETRINA SECTIONS ── */
+    .v-section { padding: 2.5rem 0; border-top: 1px solid var(--border); overflow: hidden; }
+    .v-inner { max-width: 1100px; margin: 0 auto; width: 100%; padding: 0 3rem; box-sizing: border-box; }
+    .v-label { font-size: 0.62rem; letter-spacing: 4px; text-transform: uppercase; color: var(--oro); margin-bottom: 0.3rem; }
+    .v-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600; margin-bottom: 1.5rem; line-height: 1.2; }
+
+    /* ── CHI SIAMO ── */
+    #section-chi-siamo { display: none; }
+
+    .chi-siamo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+    .chi-siamo-testo { font-size: 0.95rem; line-height: 1.8; color: rgba(242,237,228,0.75); font-weight: 300; }
+
+    .chi-siamo-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .barberpole {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .pole-stripe {
+      width: 4px;
+      height: 60px;
+      background: linear-gradient(to bottom, var(--oro), transparent);
+      border-radius: 2px;
+    }
+
+    .pole-emblem {
+      width: 120px; height: 120px;
+      border: 1px solid var(--border-gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+    }
+
+    /* ── SERVIZI ── */
+    #servizi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.6rem; }
+
+    .service-card { padding: 1.25rem; background: var(--card-bg); border: 1px solid var(--border-gold); border-radius: 14px; transition: all 0.25s; height: 100%; }
+    #servizi-grid, #operatori-grid { align-items: stretch; }
+    .service-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--oro); background: #161410; }
+    .service-icon { font-size: 1.4rem; margin-bottom: 0.6rem; }
+    .service-name { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .service-price { color: var(--oro); font-size: 0.8rem; letter-spacing: 1px; }
+
+    /* ── OPERATORI ── */
+    #section-operatori { display: none; }
+    #operatori-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.6rem; }
+
+    .operatore-card { background: var(--card-bg); border: 1px solid var(--border-gold); border-radius: 14px; padding: 1.25rem; text-align: center; transition: all 0.25s; height: 100%; }
+    .operatore-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--oro); background: #161410; }
+    .op-avatar { width: 44px; height: 44px; border-radius: 50%; background: rgba(184,149,63,0.08); border: 1px solid var(--border-gold); display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--oro); margin: 0 auto 0.6rem; }
+    .op-nome { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .op-ruolo { font-size: 0.7rem; color: var(--grigio); letter-spacing: 1px; text-transform: uppercase; }
+
+    /* ── ORARI ── */
+    #orari-list { max-width: 380px; }
+    .orario-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+    .orario-row:last-child { border-bottom: none; }
+    .orario-giorno { font-size: 0.9rem; font-weight: 400; }
+    .orario-ore { color: var(--oro); font-size: 0.85rem; letter-spacing: 1px; }
+    .orario-ore.chiuso { color: var(--grigio); }
+
+    /* ── CONTATTI ── */
+    .contatti-grid { display: flex; flex-direction: column; gap: 0.4rem; max-width: 380px; }
+
+    .contatto-row { display: none; align-items: center; gap: 0.9rem; padding: 0.75rem 1rem; background: var(--card-bg); border: 1px solid var(--border-gold); border-radius: 10px; transition: all 0.2s; }
+    .contatto-row:hover { background: rgba(184,149,63,0.05); border-color: var(--oro); }
+    .contatto-icon { font-size: 0.95rem; flex-shrink: 0; width: 18px; text-align: center; }
+    .contatto-info a, .contatto-info span { color: var(--crema); text-decoration: none; font-size: 0.85rem; }
+    .contatto-info a:hover { color: var(--oro); }
+
+    #map-btn { display: none; margin-top: 0.6rem; padding: 0.6rem 1.1rem; background: transparent; border: 1px solid var(--border-gold); border-radius: 10px; color: var(--oro); text-decoration: none; font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+    #map-btn:hover { background: rgba(184,149,63,0.08); border-color: var(--oro); }
+
+
+
+    /* ── AUTH ── */
+    .auth-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 6rem 1.5rem 2rem; }
+    .auth-card { background: var(--card-bg); border: 1px solid var(--border); padding: 2.5rem 2rem; width: 100%; max-width: 440px; }
+    .auth-header { text-align: center; margin-bottom: 1.25rem; }
+    .auth-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .auth-title { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .auth-sub { color: var(--grigio); font-size: 0.85rem; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-label { display: block; font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase; color: var(--grigio); margin-bottom: 0.6rem; }
+    .form-input { width: 100%; padding: 0.9rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--crema); font-family: 'DM Sans', sans-serif; font-size: 1rem; transition: border-color 0.2s; }
+    .form-input:focus { outline: none; border-color: var(--oro); }
+    .form-input::placeholder { color: #333; }
+    .form-btn { width: 100%; padding: 1rem; background: var(--oro); color: var(--nero); border: none; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; margin-top: 0.5rem; }
+    .form-btn:hover:not(:disabled) { background: var(--oro-chiaro); }
+    .form-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-error { color: #c0504a; font-size: 0.82rem; margin-top: 0.75rem; min-height: 1.2em; }
+    .auth-switch { text-align: center; margin-top: 1.5rem; font-size: 0.82rem; color: var(--grigio); }
+    .auth-switch a { color: var(--oro); cursor: pointer; }
+    .auth-back { text-align: center; margin-top: 0.75rem; }
+    .auth-back a { font-size: 0.8rem; color: var(--grigio); cursor: pointer; }
+    .auth-back a:hover { color: var(--crema); }
+
+    /* ── CARTA ── */
+    #carta { min-height: 100vh; padding: 5.5rem 1.5rem 2rem; }
+    .carta-wrapper { max-width: 460px; margin: 0 auto; }
+    .carta-header { text-align: center; margin-bottom: 1.25rem; }
+    .carta-saluto { font-size: 0.65rem; letter-spacing: 4px; text-transform: uppercase; color: var(--grigio); margin-bottom: 0.4rem; }
+    .carta-nome-utente { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 600; }
+
+    .loyalty-card {
+      background: linear-gradient(145deg, #141008 0%, #0e0e0e 60%, #100f08 100%);
+      border: 1px solid var(--border-gold);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(184,149,63,0.08);
+    }
+
+    .loyalty-card::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      border: 1px solid rgba(184,149,63,0.06);
+    }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+    .card-salone-nome { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 600; color: var(--oro); letter-spacing: 1px; }
+    .card-owner { margin-bottom: 1rem; }
+    .card-owner-label { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: var(--grigio); margin-bottom: 0.3rem; }
+    .card-owner-name { font-size: 1.05rem; font-weight: 400; }
+    .card-owner-phone { font-size: 0.78rem; color: var(--grigio); margin-top: 0.1rem; }
+
+    #timbri-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+    .stamp { aspect-ratio: 1; border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: all 0.3s; animation: stampIn 0.35s ease both; }
+    @keyframes stampIn { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .stamp.stamped { border-color: var(--oro); background: rgba(184,149,63,0.1); color: var(--oro); box-shadow: 0 0 10px rgba(184,149,63,0.15); }
+
+    .progress-info { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--grigio); margin-bottom: 0.4rem; letter-spacing: 0.5px; }
+    .progress-track { height: 2px; background: var(--border); overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--oro), var(--oro-chiaro)); transition: width 0.8s ease; }
+
+    #reward-banner { display: none; align-items: center; gap: 1rem; background: rgba(184,149,63,0.08); border: 1px solid var(--border-gold); padding: 1rem 1.5rem; margin-bottom: 1rem; animation: pulse 2.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(184,149,63,0.15); } 50% { box-shadow: 0 0 18px 4px rgba(184,149,63,0.1); } }
+    .reward-title { font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--oro); margin-bottom: 0.2rem; }
+    .reward-desc { font-size: 0.98rem; }
+    .mancano-text { text-align: center; font-size: 0.82rem; color: var(--grigio); margin-bottom: 1.5rem; letter-spacing: 0.5px; }
+    .logout-btn { display: block; width: 100%; padding: 0.8rem; background: transparent; border: 1px solid var(--border); color: var(--grigio); font-family: 'DM Sans', sans-serif; font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; margin-top: 1rem; }
+    .logout-btn:hover { border-color: #444; color: var(--crema); }
+
+    /* ── FOOTER ── */
+    .site-footer { border-top: 1px solid var(--border); padding: 2rem 3rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--oro); letter-spacing: 2px; }
+    .footer-copy { font-size: 0.75rem; color: var(--grigio); }
+
+    /* ── ORARI + CONTATTI affiancati ── */
+    .orari-contatti-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+
+    /* ── CARTA FEDELTÀ SECTION ── */
+    .fedelta-section { background: linear-gradient(135deg, #0d0b07 0%, #0a0a0a 100%); overflow: hidden; }
+    .fedelta-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; min-width: 0; }
+    .fedelta-desc { color: rgba(242,237,228,0.65); line-height: 1.7; font-size: 0.9rem; margin-bottom: 1.25rem; font-weight: 300; max-width: 380px; }
+    .fedelta-steps { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.25rem; }
+    .fedelta-step { display: flex; align-items: center; gap: 1.25rem; }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-gold); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--oro); flex-shrink: 0; font-family: 'Cormorant Garamond', serif; font-weight: 600; }
+    .step-text { font-size: 0.9rem; color: rgba(242,237,228,0.75); }
+    .fedelta-btns { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+    /* CARD PREVIEW */
+    .fedelta-card-preview { display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden; }
+    .preview-card {
+      background: linear-gradient(145deg, #141008, #0e0e0e);
+      border: 1px solid var(--border-gold);
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 100%;
+      width: 280px;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(184,149,63,0.08);
+    }
+    .preview-salone { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 600; color: var(--oro); margin-bottom: 1.5rem; letter-spacing: 1px; }
+    .preview-timbri { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; margin-bottom: 0.85rem; }
+    .pt { aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+    .pt.stamped { border-color: var(--oro); background: rgba(184,149,63,0.1); color: var(--oro); }
+    .preview-info { font-size: 0.75rem; color: var(--grigio); letter-spacing: 0.5px; }
+
+    @media (max-width: 768px) {
+      nav { padding: 0.9rem 1rem; }
+      .nav-logo { font-size: 1.1rem; }
+      .nav-links { gap: 0.35rem; }
+      .nav-btn { padding: 0.4rem 0.75rem; font-size: 0.68rem; letter-spacing: 0.5px; }
+      .v-section { padding: 2rem 0; }
+      .v-inner { padding: 0 1.25rem; }
+      .v-title { font-size: 1.5rem; margin-bottom: 1.25rem; }
+      .chi-siamo-layout { grid-template-columns: 1fr; }
+      .chi-siamo-visual { display: none; }
+      .orari-contatti-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+      .fedelta-layout { grid-template-columns: 1fr; gap: 1.5rem; }
+      .fedelta-card-preview { display: flex; }
+      .preview-card { max-width: 100%; border-radius: 14px; }
+      .auth-card { padding: 2rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-logo salone-nome">BarberClub</div>
+    <div class="nav-links" id="nav-links">
+      <button class="nav-btn" onclick="showSection('registrazione')">Registrati</button>
+      <button class="nav-btn gold" onclick="showSection('login')">La mia carta</button>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <section id="hero" class="active">
+    <div class="hero-body">
+      <p class="hero-eyebrow">✦ Barbiere dal 1985 ✦</p>
+      <h1 class="hero-titolo salone-nome" id="hero-titolo">BarberClub</h1>
+      <p class="hero-slogan" id="hero-slogan">Tradizione, stile e precisione — dal primo taglio all'ultimo dettaglio.</p>
+    </div>
+
+    <!-- CHI SIAMO -->
+    <div class="v-section" id="section-chi-siamo">
+      <div class="v-inner">
+        <p class="v-label">La nostra storia</p>
+        <h2 class="v-title">Chi siamo</h2>
+        <div class="chi-siamo-layout">
+          <p class="chi-siamo-testo" id="chi-siamo-testo"></p>
+          <div class="chi-siamo-visual">
+            <div class="barberpole">
+              <div class="pole-stripe"></div>
+              <div class="pole-emblem">✂️</div>
+              <div class="pole-stripe" style="background:linear-gradient(to top, var(--oro), transparent)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVIZI -->
+    <div class="v-section">
+      <div class="v-inner">
+        <p class="v-label">Quello che facciamo</p>
+        <h2 class="v-title">Servizi & prezzi</h2>
+        <div id="servizi-grid"></div>
+      </div>
+    </div>
+
+    <!-- OPERATORI -->
+    <div class="v-section" id="section-operatori">
+      <div class="v-inner">
+        <p class="v-label">Il nostro team</p>
+        <h2 class="v-title">I nostri barbieri</h2>
+        <div id="operatori-grid"></div>
+      </div>
+    </div>
+
+    <!-- ORARI + CONTATTI affiancati -->
+    <div class="v-section">
+      <div class="v-inner">
+        <div class="orari-contatti-grid">
+          <!-- ORARI -->
+          <div>
+            <p class="v-label">Quando trovarci</p>
+            <h2 class="v-title">Orari di apertura</h2>
+            <div id="orari-list"><p style="color:var(--grigio);font-size:.9rem">Orari non ancora configurati.</p></div>
+          </div>
+          <!-- CONTATTI -->
+          <div>
+            <p class="v-label">Dove siamo</p>
+            <h2 class="v-title">Contatti</h2>
+            <div class="contatti-grid">
+              <div class="contatto-row" id="row-indirizzo"><div class="contatto-icon">📍</div><div class="contatto-info"><span id="info-indirizzo"></span></div></div>
+              <div class="contatto-row" id="row-telefono"><div class="contatto-icon">📞</div><div class="contatto-info"><a id="info-telefono" href="#"></a></div></div>
+              <div class="contatto-row" id="row-email"><div class="contatto-icon">✉️</div><div class="contatto-info"><a id="info-email" href="#"></a></div></div>
+            </div>
+            <a id="map-btn" href="#" target="_blank">📍 Apri in Google Maps</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARTA FEDELTÀ -->
+    <div class="v-section fedelta-section">
+      <div class="v-inner">
+        <div class="fedelta-layout">
+          <div class="fedelta-text">
+            <p class="v-label">✦ Programma fedeltà</p>
+            <h2 class="v-title" style="margin-bottom:1rem">La tua carta<br>fedeltà digitale</h2>
+            <p class="fedelta-desc">Accumula un timbro ad ogni visita. Raggiungi il traguardo e sblocca il tuo premio. Niente tessere di carta — tutto sul tuo telefono, sempre con te.</p>
+            <div class="fedelta-steps">
+              <div class="fedelta-step"><div class="step-num">1</div><div class="step-text">Registrati gratuitamente con nome e telefono</div></div>
+              <div class="fedelta-step"><div class="step-num">2</div><div class="step-text">Accumula un timbro ad ogni taglio</div></div>
+              <div class="fedelta-step"><div class="step-num">3</div><div class="step-text">Raggiungi il premio e riscuotilo dal barbiere</div></div>
+            </div>
+            <div class="fedelta-btns">
+              <button class="btn-gold" onclick="showSection('registrazione')">Crea la tua carta</button>
+              <button class="btn-outline" onclick="showSection('login')">Accedi</button>
+            </div>
+          </div>
+          <div class="fedelta-card-preview">
+            <div class="preview-card">
+              <div class="preview-salone salone-nome">BarberClub</div>
+              <div class="preview-timbri">
+                <span class="pt stamped">✂</span><span class="pt stamped">✂</span><span class="pt stamped">✂</span>
+                <span class="pt stamped">✂</span><span class="pt stamped">✂</span><span class="pt stamped">✂</span>
+                <span class="pt stamped">✂</span><span class="pt empty"></span><span class="pt empty"></span>
+                <span class="pt empty"></span>
+              </div>
+              <div class="preview-info">7 / 10 timbri — <span style="color:var(--oro)">Taglio gratis</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+
+  </section>
+
+  <!-- ═══ REGISTRAZIONE ═══ -->
+  <section id="registrazione">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-header"><div class="auth-icon">✂️</div><h2 class="auth-title">Registrati</h2><p class="auth-sub">Crea la tua carta fedeltà digitale gratuita</p></div>
+        <div class="form-group"><label class="form-label">Nome e Cognome</label><input id="reg-nome" class="form-input" type="text" placeholder="Mario Rossi"></div>
+        <div class="form-group"><label class="form-label">Numero di Telefono</label><input id="reg-telefono" class="form-input" type="tel" placeholder="333 1234567"></div>
+        <button id="reg-btn" class="form-btn" onclick="registerCliente()">Registrati</button>
+        <p class="form-error" id="reg-error"></p>
+        <p class="auth-switch">Hai già un account? <a onclick="showSection('login')">Accedi</a></p>
+        <p class="auth-back"><a onclick="showSection('hero')">← Torna al sito</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ LOGIN ═══ -->
+  <section id="login">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-header"><div class="auth-icon">💈</div><h2 class="auth-title">La tua carta</h2><p class="auth-sub">Inserisci il tuo numero per vedere i timbri</p></div>
+        <div class="form-group"><label class="form-label">Numero di Telefono</label><input id="login-telefono" class="form-input" type="tel" placeholder="333 1234567"></div>
+        <button id="login-btn" class="form-btn" onclick="loginCliente()">Accedi</button>
+        <p class="form-error" id="login-error"></p>
+        <p class="auth-switch">Non sei registrato? <a onclick="showSection('registrazione')">Registrati</a></p>
+        <p class="auth-back"><a onclick="showSection('hero')">← Torna al sito</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CARTA FEDELTÀ ═══ -->
+  <section id="carta">
+    <div class="carta-wrapper">
+      <div class="carta-header">
+        <p class="carta-saluto">Benvenuto</p>
+        <h2 class="carta-nome-utente" id="carta-nome">—</h2>
+      </div>
+      <div id="reward-banner">
+        <div style="font-size:2rem">🏆</div>
+        <div><p class="reward-title">Premio sbloccato!</p><p class="reward-desc" id="reward-text"></p></div>
+      </div>
+      <div class="loyalty-card">
+        <div class="card-top">
+          <div class="card-salone-nome salone-nome">BarberClub</div>
+          <div style="font-size:1.4rem;opacity:.4">✂</div>
+        </div>
+        <div class="card-owner">
+          <p class="card-owner-label">Titolare carta</p>
+          <p class="card-owner-name" id="carta-nome-2"></p>
+          <p class="card-owner-phone" id="carta-telefono"></p>
+        </div>
+        <div id="timbri-grid"></div>
+        <div>
+          <div class="progress-info">
+            <span><span id="timbri-count">0</span> / <span id="timbri-max">10</span> timbri</span>
+            <span>Premio: <span id="carta-sconto-label" style="color:var(--oro)">—</span></span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progress-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <p class="mancano-text" id="mancano-text"></p>
+      <button class="logout-btn" onclick="logout()">↩ Esci</button>
+    </div>
+  </section>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+      window.scrollTo(0,0);
+      document.getElementById('nav-links').style.display = id === 'carta' ? 'none' : 'flex';
+    }
+  </script>
+</body>
+</html>
