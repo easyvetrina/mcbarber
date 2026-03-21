@@ -83,7 +83,7 @@
       servizi.forEach(sv => {
         const el = document.createElement('div');
         el.className = 'service-card';
-        el.innerHTML = `<div class="service-icon">${sv.icona||'✂️'}</div><div class="service-name">${sv.nome}</div><div class="service-price">${sv.prezzo}</div>`;
+        el.innerHTML = `<div class="service-name">${sv.nome}</div><div class="service-price">${sv.prezzo}</div>`;
         sg.appendChild(el);
       });
 
