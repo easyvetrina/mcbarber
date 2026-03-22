@@ -87,6 +87,20 @@
         sg.appendChild(el);
       });
 
+      // Preview carta fedeltà
+      const previewMax = s.maxTimbri || 10;
+      const previewSconto = s.sconto || 'Taglio gratis';
+      const previewTimbri = Math.min(7, previewMax);
+      document.getElementById('preview-info').innerHTML = `${previewTimbri} / ${previewMax} timbri — <span style="color:var(--oro)">${previewSconto}</span>`;
+      const previewTimbriEl = document.querySelector('.preview-timbri');
+      if (previewTimbriEl) {
+        let html = '';
+        for (let i = 0; i < previewMax; i++) {
+          html += i < previewTimbri ? '<span class="pt stamped">✂</span>' : '<span class="pt empty"></span>';
+        }
+        previewTimbriEl.innerHTML = html;
+      }
+
       // Operatori
       const og = document.getElementById('operatori-grid');
       og.innerHTML = '';
@@ -713,7 +727,7 @@
                 <span class="pt stamped">✂</span><span class="pt empty"></span><span class="pt empty"></span>
                 <span class="pt empty"></span>
               </div>
-              <div class="preview-info">7 / 10 timbri — <span style="color:var(--oro)">Taglio gratis</span></div>
+              <div class="preview-info" id="preview-info">7 / 10 timbri — <span style="color:var(--oro)">Taglio gratis</span></div>
             </div>
           </div>
         </div>
