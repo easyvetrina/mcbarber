@@ -300,21 +300,11 @@
     }
 
     .hero-body::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(to right, transparent 30%, rgba(48,51,56,0.3) 50%, rgba(48,51,56,0.7) 65%, #303338 80%);
-      pointer-events: none;
+      display: none;
     }
 
     .hero-body::after {
-      content: '';
-      display: block;
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 30%;
-      background: linear-gradient(to top, #303338, transparent);
-      pointer-events: none;
+      display: none;
     }
 
     .hero-content {
