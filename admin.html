@@ -123,7 +123,7 @@
       let clientiAggiornati = 0;
       allClienti.forEach(c => { if (c.timbri >= maxTimbri) clientiAggiornati++; });
       if (clientiAggiornati > 0) {
-        showToast(`⚠️ ${clientiAggiornati} cliente/i ha già raggiunto il premio con il nuovo limite!`, 'gold');
+        showToast(`${clientiAggiornati} cliente/i ha già raggiunto il premio con il nuovo limite!`, 'gold');
       }
 
       btn.disabled = false; btn.textContent = '✓ Salvato!';
@@ -218,8 +218,8 @@
           <div class="cliente-main">
             <div class="cliente-avatar">${cliente.nome.charAt(0).toUpperCase()}</div>
             <div class="cliente-info">
-              <div class="cliente-nome">${cliente.nome} ${isReady ? '<span class="badge-prize">🏆 Premio!</span>' : ''}</div>
-              <div class="cliente-tel">📱 ${cliente.telefono}</div>
+              <div class="cliente-nome">${cliente.nome} ${isReady ? '<span class="badge-prize">Premio!</span>' : ''}</div>
+              <div class="cliente-tel">${cliente.telefono}</div>
               <div class="timbri-mini">
                 ${Array.from({length:max},(_,i) => `<span class="mini-stamp ${i<timbriMostrati?'on':''}"></span>`).join('')}
               </div>
@@ -246,7 +246,7 @@
       const max = settings.maxTimbri||10;
       const cliente = allClienti.find(c => c.id === telefono);
       if (!cliente) return;
-      if (cliente.timbri >= max) { showToast('⚠️ Applica prima lo sconto a questo cliente.', 'warn'); return; }
+      if (cliente.timbri >= max) { showToast('Applica prima lo sconto a questo cliente.', 'warn'); return; }
 
       // Popup conferma
       showConfirm(
@@ -255,7 +255,7 @@
         async () => {
           const nuovi = cliente.timbri + 1;
           await updateDoc(doc(db,'clienti',telefono), { timbri: nuovi, dataUltimoTimbro: new Date().toISOString() });
-          if (nuovi >= max) showToast(`🏆 ${nome} ha raggiunto il premio!`, 'gold');
+          if (nuovi >= max) showToast(`${nome} ha raggiunto il premio!`, 'gold');
           else showToast(`Timbrato! ${nome} → ${nuovi}/${max}`);
           await loadClienti(); filterClienti();
         }
@@ -276,7 +276,7 @@
         `I timbri verranno azzerati. Premio: ${settings.sconto||'Taglio gratis'}`,
         async () => {
           await updateDoc(doc(db,'clienti',telefono), { timbri: 0, dataUltimoSconto: new Date().toISOString() });
-          showToast(`🎁 Sconto applicato a ${nome}. Timbri azzerati!`, 'gold');
+          showToast(`Sconto applicato a ${nome}. Timbri azzerati!`, 'gold');
           await loadClienti(); filterClienti();
         }
       );
@@ -479,7 +479,7 @@
   <!-- LOGIN -->
   <div id="login-screen">
     <div class="login-card">
-      <div class="login-icon">🔐</div>
+      <div class="login-icon"></div>
       <h1 class="login-title">Pannello Admin</h1>
       <p class="login-sub">Accesso riservato al barbiere</p>
       <input id="admin-pwd" class="login-input" type="password" placeholder="••••••••">
@@ -513,7 +513,7 @@
         </div>
       </div>
       <div class="search-bar">
-        <input id="search-input" class="search-input" type="text" placeholder="🔍 Cerca per nome o telefono...">
+        <input id="search-input" class="search-input" type="text" placeholder="Cerca per nome o telefono...">
       </div>
       <div id="loading">Caricamento clienti...</div>
       <div id="clienti-list"></div>
@@ -574,7 +574,7 @@
           <div>
             <label class="setting-label">Timbri necessari per il premio</label>
             <input id="set-max" class="setting-input" type="number" min="1" max="50" value="10">
-            <p class="setting-hint">⚠️ Se abbassato, i clienti già oltre soglia riceveranno il premio</p>
+            <p class="setting-hint">Se abbassato, i clienti già oltre soglia riceveranno il premio</p>
           </div>
         </div>
       </div>
@@ -615,7 +615,7 @@
   <!-- CONFIRM POPUP -->
   <div id="confirm-overlay">
     <div class="confirm-box">
-      <div class="confirm-icon">✂️</div>
+      <div class="confirm-icon"></div>
       <h3 class="confirm-title" id="confirm-title"></h3>
       <p class="confirm-subtitle" id="confirm-subtitle"></p>
       <div class="confirm-btns">
