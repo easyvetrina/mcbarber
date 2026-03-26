@@ -289,14 +289,13 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
-      justify-content: flex-end;
-      text-align: left;
-      padding: 0;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 2rem;
       position: relative;
       min-height: 92vh;
-      background: url('Foto.jpeg') left center / contain no-repeat;
-      background-color: #303338;
+      background: var(--bianco);
     }
 
     .hero-body::before {
@@ -310,28 +309,41 @@
     .hero-content {
       position: relative;
       z-index: 2;
-      padding: 3rem 2.5rem;
-      max-width: 700px;
-      text-align: left;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 800px;
     }
 
     .hero-titolo {
       font-family: 'Archivo', sans-serif;
-      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-size: clamp(2rem, 5vw, 3.5rem);
       font-weight: 800;
       line-height: 1.05;
       letter-spacing: -0.02em;
-      margin-bottom: 0.75rem;
-      color: #fff;
+      margin-bottom: 1.5rem;
+      color: var(--nero);
+      text-transform: uppercase;
     }
 
     .hero-slogan {
-      font-size: clamp(0.95rem, 2vw, 1.15rem);
-      color: rgba(255,255,255,0.75);
+      font-size: clamp(0.85rem, 1.5vw, 1rem);
+      color: var(--grigio);
       max-width: 480px;
       line-height: 1.7;
       margin-bottom: 0;
       font-weight: 300;
+    }
+
+    .hero-foto {
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 2rem;
+    }
+
+    .hero-foto img {
+      width: 100%;
+      display: block;
     }
 
     .hero-logo-img {
@@ -610,6 +622,7 @@
     <div class="hero-body">
       <div class="hero-content">
         <h1 class="hero-titolo salone-nome" id="hero-titolo">MC BARBER</h1>
+        <div class="hero-foto"><img src="Foto.jpeg" alt=""></div>
         <p class="hero-slogan" id="hero-slogan">Tradizione, stile e precisione — dal primo taglio all'ultimo dettaglio.</p>
       </div>
     </div>
