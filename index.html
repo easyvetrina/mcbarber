@@ -292,7 +292,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 6rem 2rem 2rem;
+      padding: 5rem 0 0;
       position: relative;
       min-height: 92vh;
       background: var(--bianco);
@@ -312,7 +312,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      max-width: 800px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .hero-foto {
+      position: relative;
+      width: 100%;
+      margin-bottom: 0;
+    }
+
+    .hero-foto img {
+      width: 100%;
+      display: block;
+    }
+
+    .hero-text-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 2.5rem;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+      text-align: left;
     }
 
     .hero-titolo {
@@ -321,29 +343,18 @@
       font-weight: 800;
       line-height: 1.05;
       letter-spacing: -0.02em;
-      margin-bottom: 1.5rem;
-      color: var(--nero);
+      margin-bottom: 0.5rem;
+      color: #fff;
       text-transform: uppercase;
     }
 
     .hero-slogan {
-      font-size: clamp(0.85rem, 1.5vw, 1rem);
-      color: var(--grigio);
+      font-size: clamp(0.8rem, 1.5vw, 1rem);
+      color: rgba(255,255,255,0.8);
       max-width: 480px;
       line-height: 1.7;
       margin-bottom: 0;
       font-weight: 300;
-    }
-
-    .hero-foto {
-      width: 100%;
-      max-width: 900px;
-      margin-bottom: 2rem;
-    }
-
-    .hero-foto img {
-      width: 100%;
-      display: block;
     }
 
     .hero-logo-img {
@@ -590,13 +601,11 @@
       .nav-logo { font-size: 0.85rem; }
       .nav-links { gap: 0.35rem; }
       .nav-btn { padding: 5px 14px; font-size: 0.65rem; }
-      .hero-body { min-height: auto; padding: 5rem 0 1rem; }
-      .hero-content { padding: 0; }
-      .hero-titolo { padding: 0 1.25rem; }
-      .hero-slogan { padding: 0 1.25rem; }
-      .hero-foto { max-width: 100%; margin-bottom: 1rem; }
-      .hero-foto img { width: 100%; }
-      .hero-titolo { font-size: clamp(2rem, 8vw, 3rem); }
+      .hero-body { min-height: auto; padding: 5rem 0 0; }
+      .hero-content { padding: 0; max-width: 100%; }
+      .hero-foto { max-width: 100%; }
+      .hero-titolo { font-size: clamp(1.5rem, 6vw, 2.5rem); }
+      .hero-text-overlay { padding: 1.5rem; }
       .v-section { padding: 2.5rem 0; }
       .v-inner { padding: 0 1.25rem; }
       .v-title { font-size: 1.5rem; margin-bottom: 1.25rem; }
@@ -625,9 +634,13 @@
   <section id="hero" class="active">
     <div class="hero-body">
       <div class="hero-content">
-        <h1 class="hero-titolo salone-nome" id="hero-titolo">MC BARBER</h1>
-        <div class="hero-foto"><img src="Foto.jpeg" alt=""></div>
-        <p class="hero-slogan" id="hero-slogan">Tradizione, stile e precisione — dal primo taglio all'ultimo dettaglio.</p>
+        <div class="hero-foto">
+          <img src="Foto.jpeg" alt="">
+          <div class="hero-text-overlay">
+            <h1 class="hero-titolo salone-nome" id="hero-titolo">MC BARBER SHOP</h1>
+            <p class="hero-slogan" id="hero-slogan">La qualità si paga ma non da MC BARBER SHOP!</p>
+          </div>
+        </div>
       </div>
     </div>
 
