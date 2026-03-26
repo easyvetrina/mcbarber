@@ -96,7 +96,7 @@
       if (previewTimbriEl) {
         let html = '';
         for (let i = 0; i < previewMax; i++) {
-          html += i < previewTimbri ? '<span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span>' : '<span class="pt empty"></span>';
+          html += i < previewTimbri ? '<span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span>' : '<span class="pt empty"></span>';
         }
         previewTimbriEl.innerHTML = html;
       }
@@ -168,7 +168,7 @@
       for (let i = 0; i < max; i++) {
         const stamp = document.createElement('div');
         stamp.className = 'stamp ' + (i < timbriMostrati ? 'stamped' : 'empty');
-        stamp.innerHTML = i < timbriMostrati ? '<img src="Logo.png" class="stamp-logo">' : '';
+        stamp.innerHTML = i < timbriMostrati ? '<img src="Logo.jpeg" class="stamp-logo" alt="">' : '';
         stamp.style.animationDelay = (i * 0.05) + 's';
         grid.appendChild(stamp);
       }
@@ -531,7 +531,7 @@
     .stamp { aspect-ratio: 1; border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: all 0.3s; animation: stampIn 0.35s ease both; }
     @keyframes stampIn { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     .stamp.stamped { border-color: var(--nero); background: var(--bianco); overflow: hidden; }
-    .stamp-logo { width: 60%; height: 60%; object-fit: contain; filter: invert(1); }
+    .stamp-logo { width: 60%; height: 60%; object-fit: contain; }
 
     .progress-info { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--grigio); margin-bottom: 0.4rem; letter-spacing: 0.02em; font-weight: 500; }
     .progress-track { height: 2px; background: var(--grigio-chiaro); overflow: hidden; }
@@ -580,7 +580,7 @@
     .preview-timbri { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; margin-bottom: 0.85rem; }
     .pt { aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
     .pt.stamped { border-color: var(--nero); background: var(--bianco); overflow: hidden; }
-    .pt .stamp-logo { width: 60%; height: 60%; object-fit: contain; filter: invert(1); }
+    .pt .stamp-logo { width: 60%; height: 60%; object-fit: contain; }
     .preview-info { font-size: 0.75rem; color: var(--grigio); letter-spacing: 0.02em; }
 
     @media (max-width: 768px) {
@@ -700,9 +700,9 @@
             <div class="preview-card">
               <div class="preview-salone salone-nome">MC BARBER</div>
               <div class="preview-timbri">
-                <span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span><span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span><span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span>
-                <span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span><span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span><span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span>
-                <span class="pt stamped"><img src="Logo.png" class="stamp-logo"></span><span class="pt empty"></span><span class="pt empty"></span>
+                <span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span><span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span><span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span>
+                <span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span><span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span><span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span>
+                <span class="pt stamped"><img src="Logo.jpeg" class="stamp-logo" alt=""></span><span class="pt empty"></span><span class="pt empty"></span>
                 <span class="pt empty"></span>
               </div>
               <div class="preview-info" id="preview-info">7 / 10 timbri — <span style="color:var(--nero);font-weight:600">Taglio gratis</span></div>
@@ -760,7 +760,7 @@
       <div class="loyalty-card">
         <div class="card-top">
           <div class="card-salone-nome salone-nome">MC BARBER</div>
-          <div style="opacity:.3"><img src="Logo.png" style="height:24px;filter:invert(1);"></div>
+          <div style="opacity:.3"><img src="Logo.jpeg" style="height:24px;"></div>
         </div>
         <div class="card-owner">
           <p class="card-owner-label">Titolare carta</p>
