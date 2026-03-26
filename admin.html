@@ -230,9 +230,9 @@
             </div>
           </div>
           <div class="cliente-actions">
-            <button class="action-btn timbra" onclick="timbra('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">✂ Timbra</button>
-            <button class="action-btn sconto ${!isReady?'':'active-sconto'}" onclick="applicaSconto('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">🎁 Applica sconto</button>
-            <button class="action-btn danger" onclick="deleteCliente('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">🗑</button>
+            <button class="action-btn timbra" onclick="timbra('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">Timbra</button>
+            <button class="action-btn sconto ${!isReady?'':'active-sconto'}" onclick="applicaSconto('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">Applica sconto</button>
+            <button class="action-btn danger" onclick="deleteCliente('${cliente.id}','${cliente.nome.replace(/'/g,"\\'")}')">Elimina</button>
           </div>
         `;
         container.appendChild(card);
@@ -256,7 +256,7 @@
           const nuovi = cliente.timbri + 1;
           await updateDoc(doc(db,'clienti',telefono), { timbri: nuovi, dataUltimoTimbro: new Date().toISOString() });
           if (nuovi >= max) showToast(`🏆 ${nome} ha raggiunto il premio!`, 'gold');
-          else showToast(`✂ Timbrato! ${nome} → ${nuovi}/${max}`);
+          else showToast(`Timbrato! ${nome} → ${nuovi}/${max}`);
           await loadClienti(); filterClienti();
         }
       );
@@ -291,7 +291,7 @@
         'Questa azione non può essere annullata.',
         async () => {
           await deleteDoc(doc(db,'clienti',telefono));
-          showToast(`🗑 ${nome} eliminato.`);
+          showToast(`${nome} eliminato.`);
           await loadClienti(); filterClienti();
         }
       );
