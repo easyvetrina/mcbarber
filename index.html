@@ -287,57 +287,39 @@
 
     /* ── HERO ── */
     .hero-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 0;
       position: relative;
-      background: #000;
       width: 100%;
+      min-height: 92vh;
+      background: #000;
+      overflow: hidden;
     }
 
-    .hero-body::before {
-      display: none;
-    }
-
-    .hero-body::after {
-      display: none;
-    }
+    .hero-body::before { display: none; }
+    .hero-body::after { display: none; }
 
     .hero-content {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      max-width: 100%;
-      background: #000;
+      position: absolute;
+      inset: 0;
     }
 
     .hero-foto {
-      position: relative;
-      width: 100%;
+      position: absolute;
+      inset: 0;
     }
 
     .hero-foto img {
       width: 100%;
-      max-width: 100%;
-      height: auto;
+      height: 100%;
       display: block;
       object-fit: cover;
     }
 
     .hero-text-overlay {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 2.5rem;
-      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+      bottom: 8%;
+      left: 60px;
+      z-index: 2;
+      max-width: 500px;
       text-align: left;
     }
 
@@ -605,11 +587,9 @@
       .nav-logo { font-size: 0.85rem; }
       .nav-links { gap: 0.35rem; }
       .nav-btn { padding: 5px 14px; font-size: 0.65rem; }
-      .hero-body { min-height: auto; padding: 3.5rem 0 0; }
-      .hero-content { padding: 0; max-width: 100%; }
-      .hero-foto { max-width: 100%; }
+      .hero-body { min-height: 80vh; }
+      .hero-text-overlay { bottom: 70px; left: 20px; right: 20px; max-width: 100%; }
       .hero-titolo { font-size: clamp(1.5rem, 6vw, 2.5rem); }
-      .hero-text-overlay { padding: 1.5rem; }
       .v-section { padding: 2.5rem 0; }
       .v-inner { padding: 0 1.25rem; }
       .v-title { font-size: 1.5rem; margin-bottom: 1.25rem; }
@@ -636,8 +616,8 @@
 
   <!-- ═══ HERO ═══ -->
   <section id="hero" class="active">
-    <div class="hero-body" style="background:#000; width:100%;">
-      <div class="hero-content" style="background:#000; width:100%;">
+    <div class="hero-body">
+      <div class="hero-content">
         <div class="hero-foto">
           <img src="Foto.jpeg?v=2" alt="">
           <div class="hero-text-overlay">
